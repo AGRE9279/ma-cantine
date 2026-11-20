@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma Cantine</title>
+<meta name="theme-color" content="#1d2b24">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, practical, for canteen staff — big buttons, plain words
+   IDEA: the canteen register: who ate, who paid, what was bought
+   PICTURE: the serving list itself — names with a big Servir button and live counter
+   COLOUR and TYPE: white ground, deep green-black ink, warm orange accent for food; Figtree
+   LAYOUT: header with date, one view at a time, bottom nav with 4 entries */
+:root{color-scheme:light;--bg:#f5f5f0;--card:#fff;--ink:#1d2b24;--mute:#5b6660;--line:#e2e3dc;--pos:#137a43;--neg:#c62828;--low:#b86200;--acc:#1d2b24;--acci:#fff;--hot:#e8590c;--warn:#fff2d9}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#0f1512;--card:#18201c;--ink:#eef2ef;--mute:#9aa7a0;--line:#2a3530;--pos:#4fd18b;--neg:#ff7b7b;--low:#ffb454;--acc:#eef2ef;--acci:#0f1512;--warn:#3a3014}}
+:root[data-theme=dark]{color-scheme:dark;--bg:#0f1512;--card:#18201c;--ink:#eef2ef;--mute:#9aa7a0;--line:#2a3530;--pos:#4fd18b;--neg:#ff7b7b;--low:#ffb454;--acc:#eef2ef;--acci:#0f1512;--warn:#3a3014}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding:12px max(4vw,14px) 110px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+header h1{font-size:21px;font-weight:800;margin:0;flex:1 1 140px}
+.date{display:flex;gap:6px;align-items:center}
+.ib{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:18px;flex:none}
+input[type=date]{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 8px;font-size:16px;width:150px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+h2{font-size:19px;font-weight:800;margin:0 0 10px}
+.lbl{color:var(--mute);font-size:15px}
+label{display:block;font-size:14px;color:var(--mute);margin:10px 0 6px}
+.big{font-size:clamp(34px,10vw,52px);font-weight:800;line-height:1.05;white-space:nowrap;margin:2px 0 8px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.low{color:var(--low)}
+.duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.duo>div{background:var(--bg);border-radius:12px;padding:10px 12px}
+.duo b{display:block;font-size:20px;white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{min-height:46px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);cursor:pointer;font-weight:700}
+.chips button.on{border-color:var(--acc);background:var(--acc);color:var(--acci)}
+.txt{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:16px}
+.amt{height:56px;font-size:24px;font-weight:800}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sm{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--card);padding:0 14px;cursor:pointer;font-weight:600}
+.sm.on{background:var(--acc);color:var(--acci);border-color:var(--acc)}
+.go{width:100%;min-height:54px;margin-top:12px;border:0;border-radius:14px;background:var(--acc);color:var(--acci);font-size:18px;font-weight:800;cursor:pointer}
+.hot{background:var(--hot);color:#fff}
+.prog{height:14px;border-radius:7px;background:var(--bg);overflow:hidden;margin-top:8px}
+.prog span{display:block;height:100%;background:var(--pos);transition:width .3s}
+.list{list-style:none;margin:8px 0 0;padding:0}
+.list>li{border-bottom:1px solid var(--line)}
+.lr{display:flex;align-items:center;gap:8px;padding:8px 0}
+.nm{flex:1;text-align:left;background:transparent;border:0;cursor:pointer;padding:4px 0;font-weight:800;font-size:17px;min-height:46px}
+.nm small{display:block;font-weight:400;font-size:14px;color:var(--mute)}
+.nm small b{font-weight:800}
+.serve{flex:none;min-width:108px;height:52px;border-radius:14px;border:0;background:var(--hot);color:#fff;font-weight:800;font-size:17px;cursor:pointer}
+.serve.done{background:var(--bg);color:var(--pos);border:1px solid var(--line)}
+.det{background:var(--bg);border-radius:14px;padding:14px;margin:0 0 12px}
+.hist{list-style:none;margin:10px 0 0;padding:0;font-size:15px}
+.hist li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.hist li span:first-child{color:var(--mute)}
+.hist li b{white-space:nowrap}
+.x{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:transparent;cursor:pointer;flex:none}
+.acts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}
+.acts>*{display:flex;align-items:center;justify-content:center;min-height:50px;margin:0;border-radius:14px;font-weight:800;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;text-align:center;padding:0 8px}
+.acts .wa{background:#25d366;color:#08311b;border:0}
+.acts .dark{background:var(--acc);color:var(--acci);border:0}
+.note{background:var(--warn);border-radius:12px;padding:10px 12px;font-size:15px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.facts{list-style:none;margin:10px 0 0;padding:0}
+.facts li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.facts li span{color:var(--mute)}
+.facts li b{white-space:nowrap;text-align:right}
+.cols{display:flex;align-items:stretch;gap:3px;height:140px;margin:8px 0 4px}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;border:0;background:transparent;padding:0;cursor:pointer}
+.col .b{width:100%;max-width:40px;border-radius:5px 5px 2px 2px;background:var(--hot);min-height:2px}
+.col.cur .b{outline:2px solid var(--ink);outline-offset:1px}
+.col small{font-size:13px;color:var(--mute);height:18px;line-height:18px}
+.ml{display:grid;grid-template-columns:minmax(0,1fr) 110px 44px;gap:6px;margin-bottom:6px}
+.empty{color:var(--mute);padding:12px 0}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px max(2vw,6px) calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav button{min-height:56px;border:0;background:transparent;border-radius:12px;cursor:pointer;font-weight:700;font-size:15px;color:var(--mute);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--ink);background:var(--bg)}
+nav button.on svg{color:var(--hot)}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--acc);color:var(--acci);padding:12px 16px;border-radius:12px;font-weight:600;display:none;gap:14px;align-items:center;z-index:9;width:max-content;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast button{background:transparent;border:0;color:inherit;text-decoration:underline;cursor:pointer;font-weight:800;min-height:36px;flex:none}
+[hidden]{display:none!important}
+@media(max-width:420px){.serve{min-width:96px}.duo b{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.prog span{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">Ma Cantine</h1>
+    <div class="date">
+      <button class="ib" id="prev" aria-label="Jour précédent">‹</button>
+      <input type="date" id="day" aria-label="Date">
+      <button class="ib" id="next" aria-label="Jour suivant">›</button>
+      <button class="ib" id="gear" aria-label="Réglages">⚙</button>
+    </div>
+  </header>
+
+  <div class="note" id="demo" hidden><span>Les élèves et opérations affichés sont des exemples (noms inventés).</span><button class="sm" id="clearDemo">Effacer les exemples</button></div>
+
+  <!-- SERVIR -->
+  <section data-v="servir">
+    <div class="card">
+      <label style="margin-top:0">Repas à servir</label>
+      <div class="chips" id="sMeal"></div>
+      <div class="row" style="justify-content:space-between;margin-top:12px">
+        <div><span class="lbl">Servis</span><div class="big" id="sCount" style="margin:0">0</div></div>
+        <button class="sm" id="sCash">+ Repas payé sur place</button>
+      </div>
+      <div class="prog"><span id="sProg" style="width:0"></span></div>
+    </div>
+    <div class="card">
+      <div class="row"><input class="txt" id="sQ" placeholder="Chercher un élève ou une classe…" autocomplete="off" style="flex:1 1 180px"><button class="sm" id="sTodo">Pas encore servis</button></div>
+      <ul class="list" id="sList"></ul>
+    </div>
+  </section>
+
+  <!-- ELEVES -->
+  <section data-v="eleves" hidden>
+    <div class="card">
+      <div class="duo">
+        <div><span class="lbl">Élèves</span><b id="eN">0</b></div>
+        <div><span class="lbl">Argent sur les comptes</span><b id="eTot">0 F</b></div>
+      </div>
+      <div class="lbl" id="eDebt" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="row"><input class="txt" id="eQ" placeholder="Chercher un élève ou une classe…" autocomplete="off" style="flex:1 1 180px"><button class="sm" id="eLow">À recharger</button></div>
+      <ul class="list" id="eList"></ul>
+      <button class="sm" id="eCopy" style="margin-top:10px;width:100%">Copier la liste des comptes à recharger</button>
+    </div>
+    <div class="card">
+      <h2>Ajouter un élève</h2>
+      <input class="txt" id="kN" placeholder="Nom et prénom" autocomplete="off">
+      <div class="duo" style="margin-top:8px;background:none">
+        <input class="txt" id="kC" placeholder="Classe (ex : 2nde MEI)" autocomplete="off">
+        <input class="txt" id="kT" inputmode="tel" placeholder="Tél. du parent" autocomplete="off">
+      </div>
+      <button class="go" id="kAdd">Ajouter l'élève</button>
+    </div>
+  </section>
+
+  <!-- ACHATS -->
+  <section data-v="achats" hidden>
+    <div class="card">
+      <h2>Nouvel achat</h2>
+      <label style="margin-top:0">Quoi ?</label>
+      <div class="chips" id="aCat"></div>
+      <label for="aA">Montant (FCFA)</label>
+      <input class="txt amt" id="aA" inputmode="numeric" placeholder="0" autocomplete="off">
+      <div class="row" style="margin-top:8px"><button class="sm" data-q="1000">+1 000</button><button class="sm" data-q="5000">+5 000</button><button class="sm" data-q="10000">+10 000</button><button class="sm" data-q="0">Effacer</button></div>
+      <label for="aNote">Détail (facultatif)</label>
+      <input class="txt" id="aNote" placeholder="Ex : 1 sac de 25 kg" autocomplete="off">
+      <button class="go" id="aAdd">Enregistrer l'achat</button>
+    </div>
+    <div class="card">
+      <h2 id="aTitle">Achats du mois</h2>
+      <div class="big" id="aTot" style="font-size:clamp(28px,8vw,40px)">0 F</div>
+      <ul class="list" id="aList"></ul>
+    </div>
+  </section>
+
+  <!-- BILAN -->
+  <section data-v="bilan" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">Bilan</h2>
+        <div class="chips"><button id="bD">Jour</button><button id="bW" class="on">Semaine</button><button id="bM">Mois</button></div></div>
+      <div class="lbl" id="bPer" style="margin-top:8px"></div>
+      <div class="lbl" style="margin-top:8px">Coût de la nourriture par repas</div>
+      <div class="big" id="bCost">—</div>
+      <div class="lbl" id="bCostHint"></div>
+      <div class="lbl" style="margin-top:12px">Repas servis par jour</div>
+      <div class="cols" id="bCols"></div>
+      <ul class="facts" id="bFacts"></ul>
+      <div class="acts"><a class="wa" id="bWa" href="#" target="_blank" rel="noopener">Envoyer sur WhatsApp</a><button id="bCopy">Copier le bilan</button></div>
+    </div>
+  </section>
+
+  <!-- REGLAGES -->
+  <section data-v="reglages" hidden>
+    <div class="card">
+      <h2>Nom de la cantine</h2>
+      <input class="txt" id="rNom" placeholder="Ex : Cantine du foyer" autocomplete="off">
+    </div>
+    <div class="card">
+      <h2>Repas et prix</h2>
+      <div id="rMeals"></div>
+      <div class="ml"><input class="txt" id="rmN" placeholder="Nouveau repas"><input class="txt" id="rmP" inputmode="numeric" placeholder="Prix"><button class="x" id="rmAdd" aria-label="Ajouter le repas" style="background:var(--acc);color:var(--acci);border:0;font-size:20px">+</button></div>
+    </div>
+    <div class="card">
+      <h2>Sauvegarde</h2>
+      <p class="lbl" style="margin-top:-4px">Les données sont dans ce téléphone. Sauvegardez chaque semaine pour ne rien perdre si le téléphone est perdu ou changé.</p>
+      <div class="note" id="bkWarn" hidden></div>
+      <div class="acts"><button class="dark" id="bk">Sauvegarder</button><label for="rs">Récupérer</label></div>
+      <input type="file" id="rs" accept=".json,application/json" hidden>
+      <div class="acts" id="shareRow" hidden><button id="bkShare" style="grid-column:1/-1">Envoyer la sauvegarde (WhatsApp, Drive…)</button></div>
+      <div class="note" id="rsAsk" hidden style="margin-top:10px"></div>
+      <div class="lbl" id="lastBk" style="margin-top:10px"></div>
+    </div>
+  </section>
+</div>
+
+<nav>
+  <button data-go="servir" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="7"/><path d="M3 4v5M5 4v5M4 9v11M20 4c-2 0-2 6 0 7v9"/></svg>Servir</button>
+  <button data-go="eleves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.1 4.4 1.8 5 4.6"/></svg>Élèves</button>
+  <button data-go="achats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>Achats</button>
+  <button data-go="bilan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></svg>Bilan</button>
+</nav>
+<div class="toast" id="toast" role="status"><span id="tmsg"></span><button id="undo" hidden>Annuler</button></div>
+
+<script>
+{
+const PAY=[{k:'esp',n:'Espèces'},{k:'om',n:'Orange Money'},{k:'mtn',n:'MTN MoMo'},{k:'moov',n:'Moov Money'},{k:'wave',n:'Wave'}];
+const CATS=['Riz','Huile','Poisson / viande','Légumes','Condiments','Gaz / charbon','Cuisinière','Autre'];
+const KEY='ma-cantine-v1';
+const $=id=>document.getElementById(id);
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+const dt=s=>new Date(s+'T12:00:00');
+const F=n=>(n<0?'−':'')+Math.round(Math.abs(n)).toLocaleString('fr-FR').replace(/ | /g,' ')+' F';
+const fmt=v=>v?v.toLocaleString('fr-FR').replace(/ | /g,' '):'';
+const num=s=>parseInt(String(s).replace(/\D/g,''),10)||0;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hm=()=>{const n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')};
+const shortD=s=>dt(s).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});
+const longD=s=>dt(s).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+const today=iso(new Date());
+
+let db=null;
+try{const r=localStorage.getItem(KEY);if(r)db=JSON.parse(r)}catch(e){}
+function demoDb(){
+ const R=[{id:'pd',n:'Petit-déjeuner',p:200},{id:'de',n:'Déjeuner',p:500},{id:'di',n:'Dîner',p:500}];
+ const E=[['Kouadio Marc','2nde MEI','0700000001'],['Bamba Awa','2nde MEI','0500000002'],['Yao Serge','1re ELEC','0100000003'],['Koffi Grâce','1re ELEC','0700000004'],['Traoré Issa','Tle MEI','0500000005'],['N\'Guessan Ruth','Tle MEI','0100000006']].map(([n,c,t])=>({id:uid(),n,c,t}));
+ const mv=[];const y=new Date();y.setDate(y.getDate()-1);const yd=iso(y);
+ [15000,10000,4000,10000,1000,8000].forEach((a,i)=>mv.push({id:uid(),d:yd,h:'07:05',t:'rech',a,eid:E[i].id,m:i%2?'wave':'esp'}));
+ E.forEach((e,i)=>{['pd','de','di'].forEach(r=>{if(i===4&&r!=='pd')return;const m=R.find(x=>x.id===r);mv.push({id:uid(),d:yd,h:r==='pd'?'07:30':r==='de'?'12:30':'19:00',t:'repas',a:m.p,eid:e.id,rid:r})})});
+ E.slice(0,4).forEach(e=>mv.push({id:uid(),d:today,h:'07:30',t:'repas',a:200,eid:e.id,rid:'pd'}));
+ mv.push({id:uid(),d:yd,h:'09:00',t:'achat',a:13500,cat:'Riz',note:'1 sac de 25 kg'});
+ mv.push({id:uid(),d:yd,h:'09:10',t:'achat',a:3000,cat:'Légumes'});
+ mv.push({id:uid(),d:today,h:'08:00',t:'achat',a:2500,cat:'Gaz / charbon'});
+ return{v:1,nom:'Ma Cantine',repas:R,eleves:E,mv,demo:true,lastBk:null,pay:'esp'};
+}
+if(!db||!Array.isArray(db.mv))db=demoDb();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+
+let view='servir',cur=today,mealId=null,sTodo=false,eLow=false,openK=null,delAsk=null,editK=null,cat=CATS[0],bm='w',undoFn=null,tt,pending=null;
+function pickMeal(){const hr=new Date().getHours();const r=db.repas;mealId=(r[hr<10?0:hr<16?1:2]||r[0]||{}).id||null}
+pickMeal();
+
+/* ---- computations ---- */
+function soldes(){const r={};db.eleves.forEach(k=>r[k.id]=0);db.mv.forEach(o=>{if(o.eid in r){if(o.t==='rech')r[o.eid]+=o.a;else if(o.t==='repas')r[o.eid]-=o.a}});return r}
+const dayCost=()=>db.repas.reduce((s,r)=>s+r.p,0);
+const mealName=id=>(db.repas.find(r=>r.id===id)||{n:'Repas'}).n;
+const kid=id=>db.eleves.find(k=>k.id===id);
+function state(v){const sd=dayCost();return v<0?['neg','doit '+F(-v)]:v<sd?['low',F(v)+' · à recharger']:['pos',F(v)]}
+
+function toast(msg,fn){$('tmsg').textContent=msg;$('undo').textContent='Annuler';undoFn=fn||null;$('undo').hidden=!fn;const el=$('toast');el.style.display='flex';clearTimeout(tt);tt=setTimeout(()=>{el.style.display='none';undoFn=null},fn?6000:2600)}
+$('undo').onclick=()=>{if(undoFn)undoFn();undoFn=null;$('toast').style.display='none';save();render()};
+const removeMv=id=>()=>{db.mv=db.mv.filter(o=>o.id!==id)};
+
+/* ---- render ---- */
+function render(){
+ $('title').textContent=db.nom||'Ma Cantine';
+ $('day').value=cur;
+ $('demo').hidden=!db.demo;
+ document.querySelectorAll('section[data-v]').forEach(s=>s.hidden=s.dataset.v!==view);
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===view));
+ ({servir:rServir,eleves:rEleves,achats:rAchats,bilan:rBilan,reglages:rReglages})[view]();
+}
+
+function rServir(){
+ if(!db.repas.find(r=>r.id===mealId))pickMeal();
+ $('sMeal').innerHTML=db.repas.map(r=>`<button data-meal="${r.id}" class="${r.id===mealId?'on':''}">${esc(r.n)} · ${F(r.p)}</button>`).join('')||'<span class="lbl">Ajoutez les repas dans les réglages ⚙.</span>';
+ const so=soldes(),served={};let cash=0;
+ db.mv.forEach(o=>{if(o.d===cur&&o.rid===mealId){if(o.t==='repas')served[o.eid]=o.id;else if(o.t==='cash')cash++}});
+ const n=Object.keys(served).length,tot=db.eleves.length;
+ $('sCount').textContent=`${n} / ${tot}`+(cash?` + ${cash}`:'');
+ $('sProg').style.width=tot?Math.round(n/tot*100)+'%':'0';
+ $('sTodo').classList.toggle('on',sTodo);
+ const q=$('sQ').value.trim().toLowerCase();
+ let L=db.eleves.filter(k=>!q||(k.n+' '+(k.c||'')).toLowerCase().includes(q));
+ if(sTodo)L=L.filter(k=>!served[k.id]);
+ L.sort((a,b)=>(a.c||'').localeCompare(b.c||'','fr')||a.n.localeCompare(b.n,'fr'));
+ $('sList').innerHTML=L.length?L.map(k=>{const [c,t]=state(so[k.id]);return `<li><div class="lr"><div class="nm" style="cursor:default">${esc(k.n)}<small>${esc(k.c)}${k.c?' · ':''}<b class="${c}">${t}</b></small></div>${mealId?(served[k.id]?`<button class="serve done" data-un="${served[k.id]}">✓ Servi</button>`:`<button class="serve" data-serve="${k.id}">Servir</button>`):''}</div></li>`}).join(''):`<li class="empty">${tot?(sTodo?'Tout le monde est servi pour ce repas.':'Aucun élève trouvé.'):'Aucun élève. Ajoutez-les dans l\'onglet Élèves.'}</li>`;
+}
+
+function rEleves(){
+ const so=soldes(),vals=Object.values(so);
+ $('eN').textContent=db.eleves.length;
+ $('eTot').textContent=F(vals.reduce((s,v)=>s+Math.max(0,v),0));
+ const debt=vals.reduce((s,v)=>s+Math.min(0,v),0),nd=vals.filter(v=>v<0).length;
+ $('eDebt').innerHTML=nd?`<b class="neg">${nd} élève${nd>1?'s':''} en dette : ${F(-debt)} au total</b>`:'Aucune dette.';
+ $('eLow').classList.toggle('on',eLow);
+ const q=$('eQ').value.trim().toLowerCase();
+ let L=db.eleves.filter(k=>!q||(k.n+' '+(k.c||'')).toLowerCase().includes(q));
+ if(eLow)L=L.filter(k=>so[k.id]<dayCost());
+ L.sort((a,b)=>a.n.localeCompare(b.n,'fr'));
+ $('eList').innerHTML=L.length?L.map(k=>{const [c,t]=state(so[k.id]);return `<li><div class="lr"><button class="nm" data-open="${k.id}" aria-expanded="${openK===k.id}">${esc(k.n)}<small>${esc(k.c)}${k.c?' · ':''}<b class="${c}">${t}</b></small></button><span class="lbl" aria-hidden="true">${openK===k.id?'▲':'▼'}</span></div>${openK===k.id?kidDet(k,so[k.id]):''}</li>`}).join(''):`<li class="empty">${db.eleves.length?'Aucun élève trouvé.':'Aucun élève pour le moment.'}</li>`;
+}
+function kidDet(k,v){
+ const tel=(k.t||'').replace(/\D/g,''),wn=tel.length===10?'225'+tel:tel;
+ const msg=`Bonjour, le compte cantine de ${k.n} est à ${v<0?'−':''}${F(Math.abs(v))}${v<0?' (dette)':''}. Merci de le recharger. — ${db.nom||'La cantine'}`;
+ const h=db.mv.filter(o=>o.eid===k.id).sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h)).slice(0,10);
+ const ed=editK===k.id?`<div style="margin-bottom:10px"><input class="txt" id="edN" value="${esc(k.n)}"><div class="duo" style="margin-top:6px;background:none"><input class="txt" id="edC" value="${esc(k.c)}" placeholder="Classe"><input class="txt" id="edT" value="${esc(k.t)}" inputmode="tel" placeholder="Tél. parent"></div><button class="go" data-save="${k.id}" style="margin-top:6px">Enregistrer</button></div>`:'';
+ return `<div class="det">${ed}<div class="lbl">Solde du compte</div><div class="big ${v<0?'neg':'pos'}">${v<0?'−':''}${F(Math.abs(v))}</div>
+ <label style="margin-top:0">Recharger</label>
+ <input class="txt amt" id="rA" inputmode="numeric" placeholder="Montant versé" autocomplete="off">
+ <div class="row" style="margin-top:6px"><button class="sm" data-rq="1000">+1 000</button><button class="sm" data-rq="5000">+5 000</button><button class="sm" data-rq="10000">+10 000</button></div>
+ <label>Payé en :</label><div class="chips">${PAY.map(p=>`<button data-pay="${p.k}" class="${db.pay===p.k?'on':''}">${p.n}</button>`).join('')}</div>
+ <button class="go hot" data-rech="${k.id}">Recharger le compte</button>
+ <div class="acts">${wn?`<a class="wa" href="https://wa.me/${wn}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Prévenir le parent</a>`:'<span class="lbl" style="border-style:dashed">Pas de numéro</span>'}<button data-edit="${k.id}">${editK===k.id?'Fermer':'Modifier'}</button></div>
+ ${k.t?`<div class="lbl" style="margin-top:8px">Parent : ${esc(k.t)}</div>`:''}
+ <ul class="hist">${h.length?h.map(o=>`<li><span>${shortD(o.d)} ${o.h} · ${o.t==='rech'?'Recharge ('+((PAY.find(p=>p.k===o.m)||PAY[0]).n)+')':esc(mealName(o.rid))}</span><b class="${o.t==='rech'?'pos':''}">${o.t==='rech'?'+':'−'}${F(o.a)}</b></li>`).join(''):'<li><span>Aucun mouvement</span></li>'}</ul>
+ <button class="sm" data-del="${k.id}" style="margin-top:12px;color:var(--neg)">${delAsk===k.id?'Toucher encore pour confirmer la suppression':'Supprimer l\'élève'}</button></div>`;
+}
+
+function rAchats(){
+ $('aCat').innerHTML=CATS.map(c=>`<button data-cat="${esc(c)}" class="${c===cat?'on':''}">${c}</button>`).join('');
+ const mo=cur.slice(0,7);const L=db.mv.filter(o=>o.t==='achat'&&o.d.slice(0,7)===mo).sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h));
+ $('aTitle').textContent='Achats de '+dt(cur).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+ $('aTot').textContent=F(L.reduce((s,o)=>s+o.a,0));
+ $('aList').innerHTML=L.length?L.map(o=>`<li><div class="lr"><div class="nm" style="cursor:default;font-size:16px">${esc(o.cat)}<small>${shortD(o.d)}${o.note?' · '+esc(o.note):''}</small></div><b style="white-space:nowrap">${F(o.a)}</b><button class="x" data-rmA="${o.id}" aria-label="Supprimer">✕</button></div></li>`).join(''):'<li class="empty">Aucun achat ce mois-ci.</li>';
+}
+
+function period(){
+ if(bm==='d')return[cur];
+ const d=dt(cur);let s,n;
+ if(bm==='w'){s=new Date(d);s.setDate(d.getDate()-((d.getDay()+6)%7));n=7}
+ else{s=new Date(d.getFullYear(),d.getMonth(),1,12);n=new Date(d.getFullYear(),d.getMonth()+1,0).getDate()}
+ return Array.from({length:n},(_,i)=>{const x=new Date(s);x.setDate(s.getDate()+i);return iso(x)});
+}
+function stats(){
+ const ks=period(),set=new Set(ks);const byDay={};ks.forEach(k=>byDay[k]=0);
+ const r={ks,byDay,meals:0,byMeal:{},achats:0,byCat:{},rech:0,cash:0,cashN:0};
+ db.mv.forEach(o=>{if(!set.has(o.d))return;
+  if(o.t==='repas'||o.t==='cash'){r.meals++;byDay[o.d]++;r.byMeal[o.rid]=(r.byMeal[o.rid]||0)+1;if(o.t==='cash'){r.cash+=o.a;r.cashN++}}
+  else if(o.t==='achat'){r.achats+=o.a;r.byCat[o.cat]=(r.byCat[o.cat]||0)+o.a}
+  else if(o.t==='rech')r.rech+=o.a});
+ return r;
+}
+function rBilan(){
+ ['bD','bW','bM'].forEach((id,i)=>$(id).classList.toggle('on',bm==='dwm'[i]));
+ const s=stats(),a=dt(s.ks[0]),b=dt(s.ks[s.ks.length-1]);
+ $('bPer').textContent=bm==='d'?longD(cur):bm==='w'?`Semaine du ${a.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} au ${b.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}`:'Mois de '+a.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+ const cost=s.meals?s.achats/s.meals:0;
+ const avg=s.meals?db.mv.filter(o=>(o.t==='repas'||o.t==='cash')&&s.byDay[o.d]!==undefined).reduce((t,o)=>t+o.a,0)/s.meals:0;
+ $('bCost').textContent=s.meals?F(cost):'—';
+ $('bCost').className='big '+(s.meals?(cost<=avg?'pos':'neg'):'');
+ $('bCostHint').textContent=s.meals?(cost<=avg?`Le prix moyen payé (${F(avg)}) couvre la nourriture.`:`Attention : la nourriture coûte plus que le prix moyen payé (${F(avg)}).`):'Pas encore de repas servi sur cette période.';
+ const mx=Math.max(1,...Object.values(s.byDay)),W=['L','M','M','J','V','S','D'];
+ $('bCols').innerHTML=s.ks.map((k,i)=>{const d=dt(k).getDate(),v=s.byDay[k];const lab=bm==='w'?W[i]:bm==='d'?'':(d===1||d%5===0?d:'');return `<button class="col${k===cur?' cur':''}" data-d="${k}" aria-label="${longD(k)} : ${v} repas"><span class="b" style="height:${v?Math.max(4,v/mx*100):0}%"></span><small>${lab}</small></button>`}).join('');
+ $('bCols').hidden=bm==='d';
+ const so=Object.values(soldes());
+ const f=[['Repas servis',s.meals+' repas'],...db.repas.map(r=>['· '+esc(r.n),(s.byMeal[r.id]||0)]),
+  ['Achats de nourriture',F(s.achats)],...Object.entries(s.byCat).sort((x,y)=>y[1]-x[1]).map(([c,v])=>['· '+esc(c),F(v)]),
+  ['Recharges reçues des parents',F(s.rech)],['Repas payés sur place',s.cashN?`${s.cashN} · ${F(s.cash)}`:'0'],
+  ['Argent entré moins achats',F(s.rech+s.cash-s.achats)],
+  ['Argent sur les comptes (aujourd\'hui)',F(so.reduce((t,v)=>t+Math.max(0,v),0))],
+  ['Dettes des élèves (aujourd\'hui)',F(-so.reduce((t,v)=>t+Math.min(0,v),0))]];
+ $('bFacts').innerHTML=f.map(([l,v])=>`<li><span>${l}</span><b>${v}</b></li>`).join('');
+ $('bWa').href='https://wa.me/?text='+encodeURIComponent(bilanText());
+}
+function bilanText(){
+ const s=stats(),so=Object.values(soldes());
+ let t=`*${db.nom||'Cantine'} – Bilan ${bm==='d'?'du '+longD(cur):$('bPer').textContent.toLowerCase()}*\n\n`;
+ t+=`Repas servis : ${s.meals}\n`+db.repas.map(r=>`  ${r.n} : ${s.byMeal[r.id]||0}`).join('\n')+'\n';
+ t+=`Achats : ${F(s.achats)}\n`;if(s.meals)t+=`Coût par repas : ${F(s.achats/s.meals)}\n`;
+ t+=`Recharges reçues : ${F(s.rech)}\n`;if(s.cashN)t+=`Repas payés sur place : ${F(s.cash)}\n`;
+ t+=`\nArgent sur les comptes : ${F(so.reduce((a,v)=>a+Math.max(0,v),0))}\nDettes : ${F(-so.reduce((a,v)=>a+Math.min(0,v),0))}`;
+ return t;
+}
+
+function rReglages(){
+ if(document.activeElement!==$('rNom'))$('rNom').value=db.nom||'';
+ if(!$('rMeals').contains(document.activeElement))
+  $('rMeals').innerHTML=db.repas.map(r=>`<div class="ml"><input class="txt" value="${esc(r.n)}" data-mn="${r.id}" aria-label="Nom du repas"><input class="txt" value="${fmt(r.p)}" inputmode="numeric" data-mp="${r.id}" aria-label="Prix"><button class="x" data-mrm="${r.id}" aria-label="Supprimer ${esc(r.n)}">✕</button></div>`).join('');
+ const w=$('bkWarn'),l=$('lastBk');
+ if(db.lastBk){const j=Math.floor((Date.now()-db.lastBk)/864e5);l.textContent='Dernière sauvegarde : '+(j===0?'aujourd\'hui':j===1?'hier':'il y a '+j+' jours');w.hidden=j<7;w.textContent='La dernière sauvegarde date de plus d\'une semaine.'}
+ else{l.textContent='Aucune sauvegarde pour le moment.';w.hidden=db.demo||!db.mv.length;w.textContent='Vous n\'avez jamais sauvegardé. Touchez « Sauvegarder ».'}
+}
+
+/* ---- navigation & date ---- */
+document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){view=b.dataset.go;openK=null;render();window.scrollTo(0,0)}});
+$('gear').onclick=()=>{view=view==='reglages'?'servir':'reglages';render();window.scrollTo(0,0)};
+const go=k=>{cur=k;render()};
+const shift=n=>{const d=dt(cur);d.setDate(d.getDate()+n);go(iso(d))};
+$('prev').onclick=()=>shift(-1);$('next').onclick=()=>shift(1);
+$('day').addEventListener('change',e=>{if(e.target.value)go(e.target.value)});
+$('clearDemo').onclick=()=>{db.eleves=[];db.mv=[];db.demo=false;save();render();toast('Exemples effacés. Ajoutez vos élèves.')};
+
+/* ---- servir ---- */
+$('sMeal').addEventListener('click',e=>{const b=e.target.closest('[data-meal]');if(b){mealId=b.dataset.meal;render()}});
+$('sQ').addEventListener('input',rServir);
+$('sTodo').onclick=()=>{sTodo=!sTodo;rServir()};
+$('sList').addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.serve){const k=kid(b.dataset.serve),m=db.repas.find(r=>r.id===mealId);if(!k||!m)return;
+  const before=soldes()[k.id],op={id:uid(),d:cur,h:hm(),t:'repas',a:m.p,eid:k.id,rid:m.id};db.mv.push(op);save();render();
+  try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}
+  const after=before-m.p;toast(after<0?`${k.n} servi · solde insuffisant, doit ${F(-after)}`:`${k.n} servi · reste ${F(after)}`,removeMv(op.id));}
+ else if(b.dataset.un){toast('Déjà servi pour ce repas.',removeMv(b.dataset.un));$('undo').textContent='Annuler ce repas'}
+});
+$('sCash').onclick=()=>{const m=db.repas.find(r=>r.id===mealId);if(!m){toast('Choisissez d\'abord un repas');return}
+ const op={id:uid(),d:cur,h:hm(),t:'cash',a:m.p,rid:m.id,m:'esp'};db.mv.push(op);save();render();toast(`${m.n} payé sur place : ${F(m.p)}`,removeMv(op.id))};
+
+/* ---- eleves ---- */
+$('eQ').addEventListener('input',rEleves);
+$('eLow').onclick=()=>{eLow=!eLow;rEleves()};
+$('eList').addEventListener('input',e=>{if(e.target.id==='rA')e.target.value=fmt(num(e.target.value))});
+$('eList').addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;const ds=b.dataset;
+ if(ds.open){openK=openK===ds.open?null:ds.open;delAsk=null;editK=null;rEleves();return}
+ if(ds.rq){const i=$('rA');i.value=fmt(num(i.value)+ +ds.rq);return}
+ if(ds.pay){db.pay=ds.pay;save();const v=$('rA').value;rEleves();$('rA').value=v;return}
+ if(ds.rech){const a=num($('rA').value);if(!a){toast('Entrez le montant versé');$('rA').focus();return}const k=kid(ds.rech);
+  const op={id:uid(),d:cur,h:hm(),t:'rech',a,eid:k.id,m:db.pay};db.mv.push(op);save();render();toast(`Compte de ${k.n} rechargé : +${F(a)}`,removeMv(op.id));return}
+ if(ds.edit){editK=editK===ds.edit?null:ds.edit;rEleves();return}
+ if(ds.save){const k=kid(ds.save);const n=$('edN').value.trim();if(!n){toast('Le nom ne peut pas être vide');return}k.n=n;k.c=$('edC').value.trim();k.t=$('edT').value.trim();editK=null;save();render();toast('Élève modifié');return}
+ if(ds.del){if(delAsk!==ds.del){delAsk=ds.del;rEleves();return}const i=db.eleves.findIndex(x=>x.id===ds.del);const [k]=db.eleves.splice(i,1);openK=null;delAsk=null;save();render();toast(k.n+' supprimé',()=>db.eleves.splice(i,0,k))}
+});
+$('eCopy').onclick=async()=>{const so=soldes(),L=db.eleves.filter(k=>so[k.id]<dayCost()).sort((a,b)=>so[a.id]-so[b.id]);
+ if(!L.length){toast('Aucun compte à recharger');return}
+ const t=`*${db.nom||'Cantine'} – comptes à recharger (${longD(today)})*\n\n`+L.map(k=>`${k.n}${k.c?' ('+k.c+')':''} : ${so[k.id]<0?'doit '+F(-so[k.id]):'reste '+F(so[k.id])}`).join('\n');
+ try{await navigator.clipboard.writeText(t);toast(L.length+' élèves copiés. Collez dans WhatsApp.')}catch(e){toast('Copie impossible sur cet appareil')}};
+$('kAdd').onclick=()=>{const n=$('kN').value.trim();if(!n){toast('Entrez le nom de l\'élève');$('kN').focus();return}
+ db.eleves.push({id:uid(),n,c:$('kC').value.trim(),t:$('kT').value.trim()});$('kN').value='';save();render();$('kN').focus();toast(n+' ajouté. Touchez son nom pour recharger son compte.')};
+$('kN').addEventListener('keydown',e=>{if(e.key==='Enter')$('kAdd').click()});
+
+/* ---- achats ---- */
+$('aCat').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(b){cat=b.dataset.cat;rAchats()}});
+$('aA').addEventListener('input',e=>{e.target.value=fmt(num(e.target.value))});
+document.querySelectorAll('[data-v=achats] [data-q]').forEach(b=>b.onclick=()=>{const q=+b.dataset.q;$('aA').value=fmt(q?num($('aA').value)+q:0)});
+$('aAdd').onclick=()=>{const a=num($('aA').value);if(!a){toast('Entrez le montant de l\'achat');$('aA').focus();return}
+ const op={id:uid(),d:cur,h:hm(),t:'achat',a,cat,note:$('aNote').value.trim()};db.mv.push(op);$('aA').value='';$('aNote').value='';save();render();toast(`Achat enregistré : ${cat} ${F(a)}`,removeMv(op.id))};
+$('aList').addEventListener('click',e=>{const b=e.target.closest('[data-rmA]');if(!b)return;const i=db.mv.findIndex(o=>o.id===b.dataset.rma);if(i<0)return;const [o]=db.mv.splice(i,1);save();render();toast('Achat supprimé',()=>db.mv.push(o))});
+
+/* ---- bilan ---- */
+$('bD').onclick=()=>{bm='d';rBilan()};$('bW').onclick=()=>{bm='w';rBilan()};$('bM').onclick=()=>{bm='m';rBilan()};
+$('bCols').addEventListener('click',e=>{const b=e.target.closest('.col');if(b){cur=b.dataset.d;render()}});
+$('bCopy').onclick=async()=>{try{await navigator.clipboard.writeText(bilanText());toast('Bilan copié')}catch(e){toast('Copie impossible sur cet appareil')}};
+
+/* ---- reglages ---- */
+$('rNom').addEventListener('input',e=>{db.nom=e.target.value.trim();save();$('title').textContent=db.nom||'Ma Cantine'});
+$('rMeals').addEventListener('change',e=>{const i=e.target;const r=db.repas.find(x=>x.id===(i.dataset.mn||i.dataset.mp));if(!r)return;
+ if(i.dataset.mn)r.n=i.value.trim()||r.n;else{r.p=num(i.value)||r.p;i.value=fmt(r.p)}save();toast('Repas modifié. Les repas déjà servis gardent leur ancien prix.')});
+$('rMeals').addEventListener('click',e=>{const b=e.target.closest('[data-mrm]');if(!b)return;const i=db.repas.findIndex(r=>r.id===b.dataset.mrm);const [r]=db.repas.splice(i,1);save();b.blur();rReglages();toast(r.n+' retiré',()=>db.repas.splice(i,0,r))});
+$('rmP').addEventListener('input',e=>{e.target.value=fmt(num(e.target.value))});
+$('rmAdd').onclick=()=>{const n=$('rmN').value.trim(),p=num($('rmP').value);if(!n||!p){toast('Entrez le nom et le prix du repas');return}db.repas.push({id:uid(),n,p});$('rmN').value='';$('rmP').value='';save();document.activeElement.blur();rReglages();toast(n+' ajouté')};
+const bkFile=()=>({name:'ma-cantine-sauvegarde-'+today+'.json',txt:JSON.stringify({app:'ma-cantine',v:1,date:new Date().toISOString(),db})});
+$('bk').onclick=()=>{const {name,txt}=bkFile();
+ try{const u=URL.createObjectURL(new Blob([txt],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);db.lastBk=Date.now();save();render();toast('Sauvegarde enregistrée dans Téléchargements')}catch(e){toast('Sauvegarde impossible ici')}};
+try{const {name,txt}=bkFile();const f=new File([txt],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]}))$('shareRow').hidden=false}catch(e){}
+$('bkShare').onclick=async()=>{try{const {name,txt}=bkFile();await navigator.share({files:[new File([txt],name,{type:'application/json'})],title:'Sauvegarde Ma Cantine'});db.lastBk=Date.now();save();render()}catch(e){}};
+$('rs').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const rd=new FileReader();
+ rd.onload=()=>{try{const o=JSON.parse(rd.result);const d=o.db||o;if(!d||!Array.isArray(d.mv)||!Array.isArray(d.eleves))throw 0;pending=d;
+  const a=$('rsAsk');a.hidden=false;a.innerHTML=`<span>Récupérer cette sauvegarde (${d.eleves.length} élèves, ${d.mv.length} opérations) ? Les données de ce téléphone seront remplacées.</span><span class="row"><button class="sm" id="rsY">Oui, récupérer</button><button class="sm" id="rsN">Non</button></span>`;
+  $('rsY').onclick=()=>{db=pending;if(!Array.isArray(db.repas))db.repas=[];db.demo=false;pending=null;a.hidden=true;save();pickMeal();cur=today;render();toast('Données récupérées')};
+  $('rsN').onclick=()=>{pending=null;a.hidden=true}}catch(err){toast('Ce fichier n\'est pas une sauvegarde de Ma Cantine')}};rd.readAsText(f)});
+
+render();
+}
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
+</body>
+</html>
