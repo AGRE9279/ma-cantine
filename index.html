@@ -64,6 +64,8 @@ label{display:block;font-size:14px;color:var(--mute);margin:10px 0 6px}
 .hist li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
 .hist li span:first-child{color:var(--mute)}
 .hist li b{white-space:nowrap}
+.x.arm,.serve.arm{background:var(--neg)!important;color:#fff!important;border-color:var(--neg)!important;width:auto;padding:0 10px;font-weight:800}
+.hist .x{width:40px;height:40px;margin-left:6px}
 .x{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:transparent;cursor:pointer;flex:none}
 .acts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}
 .acts>*{display:flex;align-items:center;justify-content:center;min-height:50px;margin:0;border-radius:14px;font-weight:800;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;text-align:center;padding:0 8px}
@@ -181,6 +183,9 @@ nav button.on svg{color:var(--hot)}
       <div class="lbl" style="margin-top:12px">Repas servis par jour</div>
       <div class="cols" id="bCols"></div>
       <ul class="facts" id="bFacts"></ul>
+      <h2 style="margin:18px 0 0">Toutes les opérations</h2>
+      <p class="lbl" style="margin:2px 0 0">Touchez ✕ deux fois pour supprimer une erreur.</p>
+      <ul class="list" id="bJour"></ul>
       <div class="acts"><a class="wa" id="bWa" href="#" target="_blank" rel="noopener">Envoyer sur WhatsApp</a><button id="bCopy">Copier le bilan</button></div>
     </div>
   </section>
@@ -205,6 +210,11 @@ nav button.on svg{color:var(--hot)}
       <div class="acts" id="shareRow" hidden><button id="bkShare" style="grid-column:1/-1">Envoyer la sauvegarde (WhatsApp, Drive…)</button></div>
       <div class="note" id="rsAsk" hidden style="margin-top:10px"></div>
       <div class="lbl" id="lastBk" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h2>Tout effacer</h2>
+      <p class="lbl" style="margin-top:-4px">Supprime tous les élèves, repas servis, recharges et achats de ce téléphone. Faites d'abord une sauvegarde.</p>
+      <button class="sm" id="wipe" style="width:100%;color:var(--neg)">Effacer toutes les données</button>
     </div>
   </section>
 </div>
@@ -252,6 +262,7 @@ function demoDb(){
 if(!db||!Array.isArray(db.mv))db=demoDb();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
 
+let armed=null,armT;const arm=id=>{armed=id;clearTimeout(armT);armT=setTimeout(()=>{armed=null;render()},4000)};
 let view='servir',cur=today,mealId=null,sTodo=false,eLow=false,openK=null,delAsk=null,editK=null,cat=CATS[0],bm='w',undoFn=null,tt,pending=null;
 function pickMeal(){const hr=new Date().getHours();const r=db.repas;mealId=(r[hr<10?0:hr<16?1:2]||r[0]||{}).id||null}
 pickMeal();
@@ -266,6 +277,8 @@ function state(v){const sd=dayCost();return v<0?['neg','doit '+F(-v)]:v<sd?['low
 function toast(msg,fn){$('tmsg').textContent=msg;$('undo').textContent='Annuler';undoFn=fn||null;$('undo').hidden=!fn;const el=$('toast');el.style.display='flex';clearTimeout(tt);tt=setTimeout(()=>{el.style.display='none';undoFn=null},fn?6000:2600)}
 $('undo').onclick=()=>{if(undoFn)undoFn();undoFn=null;$('toast').style.display='none';save();render()};
 const removeMv=id=>()=>{db.mv=db.mv.filter(o=>o.id!==id)};
+const label=o=>o.t==='rech'?'Recharge – '+(kid(o.eid)?kid(o.eid).n:'élève supprimé'):o.t==='repas'?mealName(o.rid)+' – '+(kid(o.eid)?kid(o.eid).n:'élève supprimé'):o.t==='cash'?mealName(o.rid)+' payé sur place':'Achat – '+o.cat;
+function delMv(id,after){if(armed!==id){arm(id);after();return}armed=null;const i=db.mv.findIndex(o=>o.id===id);if(i<0)return;const [o]=db.mv.splice(i,1);save();render();toast('Supprimé : '+label(o),()=>db.mv.push(o))}
 
 /* ---- render ---- */
 function render(){
@@ -290,7 +303,7 @@ function rServir(){
  let L=db.eleves.filter(k=>!q||(k.n+' '+(k.c||'')).toLowerCase().includes(q));
  if(sTodo)L=L.filter(k=>!served[k.id]);
  L.sort((a,b)=>(a.c||'').localeCompare(b.c||'','fr')||a.n.localeCompare(b.n,'fr'));
- $('sList').innerHTML=L.length?L.map(k=>{const [c,t]=state(so[k.id]);return `<li><div class="lr"><div class="nm" style="cursor:default">${esc(k.n)}<small>${esc(k.c)}${k.c?' · ':''}<b class="${c}">${t}</b></small></div>${mealId?(served[k.id]?`<button class="serve done" data-un="${served[k.id]}">✓ Servi</button>`:`<button class="serve" data-serve="${k.id}">Servir</button>`):''}</div></li>`}).join(''):`<li class="empty">${tot?(sTodo?'Tout le monde est servi pour ce repas.':'Aucun élève trouvé.'):'Aucun élève. Ajoutez-les dans l\'onglet Élèves.'}</li>`;
+ $('sList').innerHTML=L.length?L.map(k=>{const [c,t]=state(so[k.id]);return `<li><div class="lr"><div class="nm" style="cursor:default">${esc(k.n)}<small>${esc(k.c)}${k.c?' · ':''}<b class="${c}">${t}</b></small></div>${mealId?(served[k.id]?`<button class="serve done${armed===served[k.id]?' arm':''}" data-un="${served[k.id]}">${armed===served[k.id]?'Retirer ?':'✓ Servi'}</button>`:`<button class="serve" data-serve="${k.id}">Servir</button>`):''}</div></li>`}).join(''):`<li class="empty">${tot?(sTodo?'Tout le monde est servi pour ce repas.':'Aucun élève trouvé.'):'Aucun élève. Ajoutez-les dans l\'onglet Élèves.'}</li>`;
 }
 
 function rEleves(){
@@ -319,7 +332,7 @@ function kidDet(k,v){
  <button class="go hot" data-rech="${k.id}">Recharger le compte</button>
  <div class="acts">${wn?`<a class="wa" href="https://wa.me/${wn}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Prévenir le parent</a>`:'<span class="lbl" style="border-style:dashed">Pas de numéro</span>'}<button data-edit="${k.id}">${editK===k.id?'Fermer':'Modifier'}</button></div>
  ${k.t?`<div class="lbl" style="margin-top:8px">Parent : ${esc(k.t)}</div>`:''}
- <ul class="hist">${h.length?h.map(o=>`<li><span>${shortD(o.d)} ${o.h} · ${o.t==='rech'?'Recharge ('+((PAY.find(p=>p.k===o.m)||PAY[0]).n)+')':esc(mealName(o.rid))}</span><b class="${o.t==='rech'?'pos':''}">${o.t==='rech'?'+':'−'}${F(o.a)}</b></li>`).join(''):'<li><span>Aucun mouvement</span></li>'}</ul>
+ <ul class="hist">${h.length?h.map(o=>`<li><span>${shortD(o.d)} ${o.h} · ${o.t==='rech'?'Recharge ('+((PAY.find(p=>p.k===o.m)||PAY[0]).n)+')':esc(mealName(o.rid))}</span><span style="display:flex;align-items:center"><b class="${o.t==='rech'?'pos':''}">${o.t==='rech'?'+':'−'}${F(o.a)}</b><button class="x${armed===o.id?' arm':''}" data-rmv="${o.id}" aria-label="Supprimer cette opération">${armed===o.id?'Confirmer ?':'✕'}</button></span></li>`).join(''):'<li><span>Aucun mouvement</span></li>'}</ul>
  <button class="sm" data-del="${k.id}" style="margin-top:12px;color:var(--neg)">${delAsk===k.id?'Toucher encore pour confirmer la suppression':'Supprimer l\'élève'}</button></div>`;
 }
 
@@ -328,7 +341,7 @@ function rAchats(){
  const mo=cur.slice(0,7);const L=db.mv.filter(o=>o.t==='achat'&&o.d.slice(0,7)===mo).sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h));
  $('aTitle').textContent='Achats de '+dt(cur).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
  $('aTot').textContent=F(L.reduce((s,o)=>s+o.a,0));
- $('aList').innerHTML=L.length?L.map(o=>`<li><div class="lr"><div class="nm" style="cursor:default;font-size:16px">${esc(o.cat)}<small>${shortD(o.d)}${o.note?' · '+esc(o.note):''}</small></div><b style="white-space:nowrap">${F(o.a)}</b><button class="x" data-rmA="${o.id}" aria-label="Supprimer">✕</button></div></li>`).join(''):'<li class="empty">Aucun achat ce mois-ci.</li>';
+ $('aList').innerHTML=L.length?L.map(o=>`<li><div class="lr"><div class="nm" style="cursor:default;font-size:16px">${esc(o.cat)}<small>${shortD(o.d)}${o.note?' · '+esc(o.note):''}</small></div><b style="white-space:nowrap">${F(o.a)}</b><button class="x${armed===o.id?' arm':''}" data-rma="${o.id}" aria-label="Supprimer">${armed===o.id?'Confirmer ?':'✕'}</button></div></li>`).join(''):'<li class="empty">Aucun achat ce mois-ci.</li>';
 }
 
 function period(){
@@ -367,8 +380,11 @@ function rBilan(){
   ['Argent sur les comptes (aujourd\'hui)',F(so.reduce((t,v)=>t+Math.max(0,v),0))],
   ['Dettes des élèves (aujourd\'hui)',F(-so.reduce((t,v)=>t+Math.min(0,v),0))]];
  $('bFacts').innerHTML=f.map(([l,v])=>`<li><span>${l}</span><b>${v}</b></li>`).join('');
+ rJournal();
  $('bWa').href='https://wa.me/?text='+encodeURIComponent(bilanText());
 }
+function rJournal(){const set=new Set(period());const L=db.mv.filter(o=>set.has(o.d)).sort((a,b)=>(b.d+b.h).localeCompare(a.d+a.h)).slice(0,150);
+ $('bJour').innerHTML=L.length?L.map(o=>`<li><div class="lr"><div class="nm" style="cursor:default;font-size:15px">${esc(label(o))}<small>${shortD(o.d)} ${o.h}${o.note?' · '+esc(o.note):''}</small></div><b class="${o.t==='rech'||o.t==='cash'?'pos':o.t==='achat'?'neg':''}" style="white-space:nowrap">${o.t==='rech'||o.t==='cash'?'+':'−'}${F(o.a)}</b><button class="x${armed===o.id?' arm':''}" data-rmj="${o.id}" aria-label="Supprimer">${armed===o.id?'Confirmer ?':'✕'}</button></div></li>`).join(''):'<li class="empty">Aucune opération sur cette période.</li>'}
 function bilanText(){
  const s=stats(),so=Object.values(soldes());
  let t=`*${db.nom||'Cantine'} – Bilan ${bm==='d'?'du '+longD(cur):$('bPer').textContent.toLowerCase()}*\n\n`;
@@ -383,6 +399,7 @@ function rReglages(){
  if(document.activeElement!==$('rNom'))$('rNom').value=db.nom||'';
  if(!$('rMeals').contains(document.activeElement))
   $('rMeals').innerHTML=db.repas.map(r=>`<div class="ml"><input class="txt" value="${esc(r.n)}" data-mn="${r.id}" aria-label="Nom du repas"><input class="txt" value="${fmt(r.p)}" inputmode="numeric" data-mp="${r.id}" aria-label="Prix"><button class="x" data-mrm="${r.id}" aria-label="Supprimer ${esc(r.n)}">✕</button></div>`).join('');
+ $('wipe').textContent=armed==='wipe'?'Toucher encore : tout sera effacé':'Effacer toutes les données';$('wipe').classList.toggle('arm',armed==='wipe');$('wipe').style.cssText=armed==='wipe'?'width:100%;background:var(--neg);color:#fff;border-color:var(--neg)':'width:100%;color:var(--neg)';
  const w=$('bkWarn'),l=$('lastBk');
  if(db.lastBk){const j=Math.floor((Date.now()-db.lastBk)/864e5);l.textContent='Dernière sauvegarde : '+(j===0?'aujourd\'hui':j===1?'hier':'il y a '+j+' jours');w.hidden=j<7;w.textContent='La dernière sauvegarde date de plus d\'une semaine.'}
  else{l.textContent='Aucune sauvegarde pour le moment.';w.hidden=db.demo||!db.mv.length;w.textContent='Vous n\'avez jamais sauvegardé. Touchez « Sauvegarder ».'}
@@ -407,7 +424,8 @@ $('sList').addEventListener('click',e=>{
   const before=soldes()[k.id],op={id:uid(),d:cur,h:hm(),t:'repas',a:m.p,eid:k.id,rid:m.id};db.mv.push(op);save();render();
   try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}
   const after=before-m.p;toast(after<0?`${k.n} servi · solde insuffisant, doit ${F(-after)}`:`${k.n} servi · reste ${F(after)}`,removeMv(op.id));}
- else if(b.dataset.un){toast('Déjà servi pour ce repas.',removeMv(b.dataset.un));$('undo').textContent='Annuler ce repas'}
+ else if(b.dataset.un){const id=b.dataset.un;if(armed!==id){arm(id);rServir();toast('Touchez encore pour retirer ce repas (l\'élève sera remboursé).');return}
+  armed=null;const i=db.mv.findIndex(o=>o.id===id);if(i<0)return;const [o]=db.mv.splice(i,1);save();render();toast(`Repas retiré : ${kid(o.eid)?kid(o.eid).n:''} remboursé de ${F(o.a)}`,()=>db.mv.push(o))}
 });
 $('sCash').onclick=()=>{const m=db.repas.find(r=>r.id===mealId);if(!m){toast('Choisissez d\'abord un repas');return}
  const op={id:uid(),d:cur,h:hm(),t:'cash',a:m.p,rid:m.id,m:'esp'};db.mv.push(op);save();render();toast(`${m.n} payé sur place : ${F(m.p)}`,removeMv(op.id))};
@@ -418,6 +436,7 @@ $('eLow').onclick=()=>{eLow=!eLow;rEleves()};
 $('eList').addEventListener('input',e=>{if(e.target.id==='rA')e.target.value=fmt(num(e.target.value))});
 $('eList').addEventListener('click',e=>{
  const b=e.target.closest('button');if(!b)return;const ds=b.dataset;
+ if(ds.rmv){delMv(ds.rmv,rEleves);return}
  if(ds.open){openK=openK===ds.open?null:ds.open;delAsk=null;editK=null;rEleves();return}
  if(ds.rq){const i=$('rA');i.value=fmt(num(i.value)+ +ds.rq);return}
  if(ds.pay){db.pay=ds.pay;save();const v=$('rA').value;rEleves();$('rA').value=v;return}
@@ -441,11 +460,12 @@ $('aA').addEventListener('input',e=>{e.target.value=fmt(num(e.target.value))});
 document.querySelectorAll('[data-v=achats] [data-q]').forEach(b=>b.onclick=()=>{const q=+b.dataset.q;$('aA').value=fmt(q?num($('aA').value)+q:0)});
 $('aAdd').onclick=()=>{const a=num($('aA').value);if(!a){toast('Entrez le montant de l\'achat');$('aA').focus();return}
  const op={id:uid(),d:cur,h:hm(),t:'achat',a,cat,note:$('aNote').value.trim()};db.mv.push(op);$('aA').value='';$('aNote').value='';save();render();toast(`Achat enregistré : ${cat} ${F(a)}`,removeMv(op.id))};
-$('aList').addEventListener('click',e=>{const b=e.target.closest('[data-rmA]');if(!b)return;const i=db.mv.findIndex(o=>o.id===b.dataset.rma);if(i<0)return;const [o]=db.mv.splice(i,1);save();render();toast('Achat supprimé',()=>db.mv.push(o))});
+$('aList').addEventListener('click',e=>{const b=e.target.closest('[data-rma]');if(b)delMv(b.dataset.rma,rAchats)});
 
 /* ---- bilan ---- */
 $('bD').onclick=()=>{bm='d';rBilan()};$('bW').onclick=()=>{bm='w';rBilan()};$('bM').onclick=()=>{bm='m';rBilan()};
 $('bCols').addEventListener('click',e=>{const b=e.target.closest('.col');if(b){cur=b.dataset.d;render()}});
+$('bJour').addEventListener('click',e=>{const b=e.target.closest('[data-rmj]');if(b)delMv(b.dataset.rmj,rJournal)});
 $('bCopy').onclick=async()=>{try{await navigator.clipboard.writeText(bilanText());toast('Bilan copié')}catch(e){toast('Copie impossible sur cet appareil')}};
 
 /* ---- reglages ---- */
@@ -455,6 +475,7 @@ $('rMeals').addEventListener('change',e=>{const i=e.target;const r=db.repas.find
 $('rMeals').addEventListener('click',e=>{const b=e.target.closest('[data-mrm]');if(!b)return;const i=db.repas.findIndex(r=>r.id===b.dataset.mrm);const [r]=db.repas.splice(i,1);save();b.blur();rReglages();toast(r.n+' retiré',()=>db.repas.splice(i,0,r))});
 $('rmP').addEventListener('input',e=>{e.target.value=fmt(num(e.target.value))});
 $('rmAdd').onclick=()=>{const n=$('rmN').value.trim(),p=num($('rmP').value);if(!n||!p){toast('Entrez le nom et le prix du repas');return}db.repas.push({id:uid(),n,p});$('rmN').value='';$('rmP').value='';save();document.activeElement.blur();rReglages();toast(n+' ajouté')};
+$('wipe').onclick=()=>{if(armed!=='wipe'){arm('wipe');rReglages();return}armed=null;const old=JSON.stringify(db);db.eleves=[];db.mv=[];db.demo=false;save();render();toast('Toutes les données sont effacées',()=>{db=JSON.parse(old)})};
 const bkFile=()=>({name:'ma-cantine-sauvegarde-'+today+'.json',txt:JSON.stringify({app:'ma-cantine',v:1,date:new Date().toISOString(),db})});
 $('bk').onclick=()=>{const {name,txt}=bkFile();
  try{const u=URL.createObjectURL(new Blob([txt],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);db.lastBk=Date.now();save();render();toast('Sauvegarde enregistrée dans Téléchargements')}catch(e){toast('Sauvegarde impossible ici')}};
