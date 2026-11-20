@@ -26,7 +26,9 @@ button,input{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--hot);outline-offset:2px}
 .wrap{max-width:720px;margin:0 auto;padding:12px max(4vw,14px) 110px}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-header h1{font-size:21px;font-weight:800;margin:0;flex:1 1 140px}
+header h1{font-size:21px;font-weight:800;margin:0}
+.pill{border:0;background:transparent;padding:2px 0;color:var(--mute);font-size:14px;cursor:pointer;min-height:28px}
+.pill.ok{color:var(--pos)}.pill.bad{color:var(--neg)}.pill.wait{color:var(--low)}
 .date{display:flex;gap:6px;align-items:center}
 .ib{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:18px;flex:none}
 input[type=date]{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 8px;font-size:16px;width:150px}
@@ -98,7 +100,7 @@ nav button.on svg{color:var(--hot)}
 <body>
 <div class="wrap">
   <header>
-    <h1 id="title">Ma Cantine</h1>
+    <div style="flex:1 1 140px"><h1 id="title" style="margin:0">Ma Cantine</h1><button id="syncPill" class="pill">☁ Non relié</button></div>
     <div class="date">
       <button class="ib" id="prev" aria-label="Jour précédent">‹</button>
       <input type="date" id="day" aria-label="Date">
@@ -119,6 +121,7 @@ nav button.on svg{color:var(--hot)}
         <button class="sm" id="sCash">+ Repas payé sur place</button>
       </div>
       <div class="prog"><span id="sProg" style="width:0"></span></div>
+      <button class="sm" id="sReset" style="width:100%;margin-top:12px;color:var(--neg)">Remettre ce repas à zéro</button>
     </div>
     <div class="card">
       <div class="row"><input class="txt" id="sQ" placeholder="Chercher un élève ou une classe…" autocomplete="off" style="flex:1 1 180px"><button class="sm" id="sTodo">Pas encore servis</button></div>
@@ -193,6 +196,21 @@ nav button.on svg{color:var(--hot)}
   <!-- REGLAGES -->
   <section data-v="reglages" hidden>
     <div class="card">
+      <h2>Connexion en ligne</h2>
+      <div id="cxOut">
+        <p class="lbl" style="margin-top:-4px">Connectez l'appli pour envoyer les données en ligne (espace gestionnaire). Sans réseau, tout est gardé dans le téléphone et envoyé plus tard.</p>
+        <input class="txt" id="cxE" type="email" autocomplete="username" placeholder="E-mail de la cantine">
+        <input class="txt" id="cxP" type="password" autocomplete="current-password" placeholder="Mot de passe" style="margin-top:8px">
+        <button class="go" id="cxGo">Se connecter</button>
+        <div class="lbl" id="cxMsg" style="margin-top:8px"></div>
+      </div>
+      <div id="cxIn" hidden>
+        <div class="lbl">Connecté avec</div><b id="cxWho"></b>
+        <div class="lbl" id="cxState" style="margin-top:8px"></div>
+        <div class="acts"><button class="dark" id="cxSync">Envoyer maintenant</button><button id="cxOff">Se déconnecter</button></div>
+      </div>
+    </div>
+    <div class="card">
       <h2>Nom de la cantine</h2>
       <input class="txt" id="rNom" placeholder="Ex : Cantine du foyer" autocomplete="off">
     </div>
@@ -260,7 +278,7 @@ function demoDb(){
  return{v:1,nom:'Ma Cantine',repas:R,eleves:E,mv,demo:true,lastBk:null,pay:'esp'};
 }
 if(!db||!Array.isArray(db.mv))db=demoDb();
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}scheduleSync()};
 
 let armed=null,armT;const arm=id=>{armed=id;clearTimeout(armT);armT=setTimeout(()=>{armed=null;render()},4000)};
 let view='servir',cur=today,mealId=null,sTodo=false,eLow=false,openK=null,delAsk=null,editK=null,cat=CATS[0],bm='w',undoFn=null,tt,pending=null;
@@ -299,6 +317,7 @@ function rServir(){
  $('sCount').textContent=`${n} / ${tot}`+(cash?` + ${cash}`:'');
  $('sProg').style.width=tot?Math.round(n/tot*100)+'%':'0';
  $('sTodo').classList.toggle('on',sTodo);
+ const rs=$('sReset');rs.hidden=!(n||cash);const ra=armed==='reset';rs.textContent=ra?`Toucher encore : retirer les ${n+cash} repas`:'Remettre ce repas à zéro';rs.style.cssText=ra?'width:100%;margin-top:12px;background:var(--neg);color:#fff;border-color:var(--neg)':'width:100%;margin-top:12px;color:var(--neg)';
  const q=$('sQ').value.trim().toLowerCase();
  let L=db.eleves.filter(k=>!q||(k.n+' '+(k.c||'')).toLowerCase().includes(q));
  if(sTodo)L=L.filter(k=>!served[k.id]);
@@ -427,6 +446,9 @@ $('sList').addEventListener('click',e=>{
  else if(b.dataset.un){const id=b.dataset.un;if(armed!==id){arm(id);rServir();toast('Touchez encore pour retirer ce repas (l\'élève sera remboursé).');return}
   armed=null;const i=db.mv.findIndex(o=>o.id===id);if(i<0)return;const [o]=db.mv.splice(i,1);save();render();toast(`Repas retiré : ${kid(o.eid)?kid(o.eid).n:''} remboursé de ${F(o.a)}`,()=>db.mv.push(o))}
 });
+$('sReset').onclick=()=>{if(armed!=='reset'){arm('reset');rServir();return}armed=null;
+ const rm=db.mv.filter(o=>o.d===cur&&o.rid===mealId&&(o.t==='repas'||o.t==='cash'));const ids=new Set(rm.map(o=>o.id));db.mv=db.mv.filter(o=>!ids.has(o.id));save();render();
+ toast(`${rm.length} repas retirés, élèves remboursés`,()=>{db.mv.push(...rm)})};
 $('sCash').onclick=()=>{const m=db.repas.find(r=>r.id===mealId);if(!m){toast('Choisissez d\'abord un repas');return}
  const op={id:uid(),d:cur,h:hm(),t:'cash',a:m.p,rid:m.id,m:'esp'};db.mv.push(op);save();render();toast(`${m.n} payé sur place : ${F(m.p)}`,removeMv(op.id))};
 
@@ -487,7 +509,99 @@ $('rs').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='
   $('rsY').onclick=()=>{db=pending;if(!Array.isArray(db.repas))db.repas=[];db.demo=false;pending=null;a.hidden=true;save();pickMeal();cur=today;render();toast('Données récupérées')};
   $('rsN').onclick=()=>{pending=null;a.hidden=true}}catch(err){toast('Ce fichier n\'est pas une sauvegarde de Ma Cantine')}};rd.readAsText(f)});
 
-render();
+/* ---- synchronisation Supabase ---- */
+const SB='https://kxdvnlpdgwmqnlzdunhg.supabase.co',SK='sb_publishable_u9WLH4mL9TyZH2GxOLq8bQ_VG30-pv4',SKEY='ma-cantine-sync';
+const ORDER=['reglages','repas','eleves','mouvements'];
+let sy={snap:{reglages:{},repas:{},eleves:{},mouvements:{}},last:{},sess:null,lastOk:null};
+try{const r=localStorage.getItem(SKEY);if(r)sy=Object.assign(sy,JSON.parse(r))}catch(e){}
+const saveSy=()=>{try{localStorage.setItem(SKEY,JSON.stringify(sy))}catch(e){}};
+let syncing=false,syncTimer=null,syncErr='';
+function rowOf(t,x,i){
+ if(t==='reglages')return{id:1,nom:x.nom||'Ma Cantine'};
+ if(t==='repas')return{id:x.id,nom:x.n,prix:x.p,ordre:i};
+ if(t==='eleves')return{id:x.id,nom:x.n,classe:x.c||'',tel_parent:x.t||''};
+ return{id:x.id,jour:x.d,heure:x.h||'',type:x.t,montant:x.a,eleve_id:x.eid||null,repas_id:x.rid||null,moyen:x.m||null,categorie:x.cat||null,note:x.note||null};
+}
+function localRows(){
+ const known=new Set([...db.eleves.map(k=>k.id),...Object.keys(sy.snap.eleves)]);
+ return{reglages:[rowOf('reglages',db)],repas:db.repas.map((r,i)=>rowOf('repas',r,i)),eleves:db.eleves.map(k=>rowOf('eleves',k)),
+  mouvements:db.mv.map(o=>{const r=rowOf('mouvements',o);if(r.eleve_id&&!known.has(r.eleve_id))r.eleve_id=null;return r})};
+}
+function pendingCount(){if(db.demo)return 0;const R=localRows();let n=0;ORDER.forEach(t=>{const sn=sy.snap[t]||{},ids=new Set();R[t].forEach(r=>{ids.add(String(r.id));if(sn[r.id]!==JSON.stringify(r))n++});if(t!=='reglages')Object.keys(sn).forEach(id=>{if(!ids.has(id))n++})});return n}
+async function authCall(body,grant){
+ const r=await fetch(SB+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:SK,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(j.error_description||j.msg||'auth'),{code:r.status});
+ sy.sess={at:j.access_token,rt:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000,email:(j.user&&j.user.email)||(sy.sess&&sy.sess.email)||''};saveSy();
+}
+async function ensureToken(){if(!sy.sess)throw new Error('nosess');if(Date.now()>sy.sess.exp-60000){try{await authCall({refresh_token:sy.sess.rt},'refresh_token')}catch(e){if(e.code>=400&&e.code<500){sy.sess=null;saveSy()}throw e}}}
+async function api(path,opt,retry){opt=opt||{};await ensureToken();
+ const r=await fetch(SB+path,Object.assign({},opt,{headers:Object.assign({apikey:SK,Authorization:'Bearer '+sy.sess.at,'Content-Type':'application/json'},opt.headers||{})}));
+ if(r.status===401&&retry!==false){sy.sess.exp=0;return api(path,opt,false)}
+ if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,160));
+ const tx=await r.text();return tx?JSON.parse(tx):null}
+function fromRemote(t,r){
+ if(t==='repas')return{id:r.id,n:r.nom,p:r.prix,_o:r.ordre};
+ if(t==='eleves')return{id:r.id,n:r.nom,c:r.classe||'',t:r.tel_parent||''};
+ const o={id:r.id,d:r.jour,h:r.heure||'',t:r.type,a:r.montant};if(r.eleve_id)o.eid=r.eleve_id;if(r.repas_id)o.rid=r.repas_id;if(r.moyen)o.m=r.moyen;if(r.categorie)o.cat=r.categorie;if(r.note)o.note=r.note;return o}
+function applyRemote(t,r){
+ const sn=sy.snap[t];
+ if(t==='reglages'){const row={id:1,nom:r.nom};sn['1']=JSON.stringify(row);if(db.nom!==r.nom){db.nom=r.nom;return true}return false}
+ const arr=t==='repas'?db.repas:t==='eleves'?db.eleves:db.mv;const i=arr.findIndex(x=>x.id===r.id);
+ if(r.supprime){delete sn[r.id];if(i>=0){arr.splice(i,1);return true}return false}
+ const loc=fromRemote(t,r),ord=loc._o;delete loc._o;
+ const js=JSON.stringify(rowOf(t,loc,ord));sn[r.id]=js;
+ if(i>=0){const cur=JSON.stringify(rowOf(t,arr[i],t==='repas'?i:0));if(cur===js)return false;arr[i]=loc}else arr.push(loc);
+ if(t==='repas'){const o={};Object.entries(sn).forEach(([id,j])=>{try{o[id]=JSON.parse(j).ordre}catch(e){}});db.repas.sort((a,b)=>(o[a.id]||0)-(o[b.id]||0))}
+ return true}
+async function sync(){
+ if(syncing||!sy.sess||!navigator.onLine||db.demo){status();return}
+ syncing=true;syncErr='';status();let changed=false;
+ try{
+  const R=localRows();
+  for(const t of ORDER){const sn=sy.snap[t];const up=R[t].filter(r=>sn[r.id]!==JSON.stringify(r));
+   for(let i=0;i<up.length;i+=300){const ch=up.slice(i,i+300);
+    await api('/rest/v1/'+t+'?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(ch.map(r=>t==='reglages'?r:Object.assign({},r,{supprime:false})))});
+    ch.forEach(r=>sn[r.id]=JSON.stringify(r));saveSy()}}
+  for(const t of ['mouvements','eleves','repas']){const sn=sy.snap[t],cur=new Set(R[t].map(r=>String(r.id)));const del=Object.keys(sn).filter(id=>!cur.has(id));
+   for(let i=0;i<del.length;i+=100){const ch=del.slice(i,i+100);
+    await api('/rest/v1/'+t+'?id=in.('+ch.map(x=>'"'+String(x).replace(/["\\]/g,'')+'"').join(',')+')',{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({supprime:true})});
+    ch.forEach(id=>delete sn[id]);saveSy()}}
+  for(const t of ORDER){for(let g=0;g<50;g++){const since=sy.last[t];
+    const res=await api('/rest/v1/'+t+'?select=*&order=updated_at.asc&limit=1000'+(since?'&updated_at=gt.'+encodeURIComponent(since):''));
+    if(!res||!res.length)break;res.forEach(r=>{if(applyRemote(t,r))changed=true});sy.last[t]=res[res.length-1].updated_at;saveSy();if(res.length<1000)break}}
+  sy.lastOk=Date.now();saveSy();
+  if(changed){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+ }catch(e){syncErr=!sy.sess?'Reconnectez-vous':(String(e.message||e).startsWith('HTTP')?'Erreur du serveur':'Pas de connexion');console.warn(e)}
+ syncing=false;status();if(changed&&!document.activeElement.matches('input'))render();
+}
+function scheduleSync(){clearTimeout(syncTimer);syncTimer=setTimeout(sync,2500)}
+function status(){
+ const p=$('syncPill');let txt,cl;const n=sy.sess?pendingCount():0;
+ if(!sy.sess){txt='☁ Non relié';cl=''}
+ else if(db.demo){txt='☁ Effacez les exemples';cl='wait'}
+ else if(syncing){txt='☁ Envoi…';cl='wait'}
+ else if(!navigator.onLine){txt=n?`☁ Pas de réseau · ${n} en attente`:'☁ Pas de réseau';cl='wait'}
+ else if(syncErr){txt='☁ '+syncErr;cl='bad'}
+ else if(n){txt=`☁ ${n} en attente`;cl='wait'}
+ else{txt='☁ En ligne ✓';cl='ok'}
+ p.textContent=txt;p.className='pill '+cl;
+ $('cxOut').hidden=!!sy.sess;$('cxIn').hidden=!sy.sess;
+ if(sy.sess){$('cxWho').textContent=sy.sess.email;$('cxState').textContent=(sy.lastOk?'Dernier envoi : '+new Date(sy.lastOk).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Pas encore envoyé')+(n?` · ${n} en attente`:'')}
+}
+$('syncPill').onclick=()=>{view='reglages';render();window.scrollTo(0,0)};
+$('cxGo').onclick=async()=>{const e=$('cxE').value.trim(),pw=$('cxP').value;const m=$('cxMsg');if(!e||!pw){m.textContent='Entrez l\'e-mail et le mot de passe.';return}
+ m.textContent='Connexion…';
+ try{await authCall({email:e,password:pw},'password');$('cxP').value='';m.textContent='';
+  if(db.demo){db.eleves=[];db.mv=[];db.demo=false;try{localStorage.setItem(KEY,JSON.stringify(db))}catch(_){}toast('Connecté. Les exemples ont été effacés.')}else toast('Connecté. Envoi des données…');
+  render();await sync();render();}
+ catch(err){$('cxP').value='';m.textContent=err.code===400?'E-mail ou mot de passe incorrect.':err.code?'Connexion refusée ('+err.code+').':'Pas de connexion Internet. Réessayez.'}};
+$('cxP').addEventListener('keydown',e=>{if(e.key==='Enter')$('cxGo').click()});
+$('cxSync').onclick=()=>{if(!navigator.onLine){toast('Pas de réseau. Les données partiront dès que le réseau revient.');return}sync()};
+$('cxOff').onclick=()=>{sy.sess=null;saveSy();status();toast('Déconnecté. Les données restent dans le téléphone.')};
+window.addEventListener('online',sync);window.addEventListener('offline',status);
+setInterval(sync,60000);
+
+render();status();sync();
 }
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
